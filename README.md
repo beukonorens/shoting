@@ -1,2 +1,1034 @@
-# shoting
-tous vos produits vestimentaire homme et femme sans distinction
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Le Journal</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+<!-- ══════════════════════════════════════════════════
+     FIREBASE CONFIG — REMPLACEZ CES VALEURS
+     par celles de votre projet Firebase
+     (voir GUIDE-FIREBASE.md pour les instructions)
+══════════════════════════════════════════════════ -->
+<script>
+  const FIREBASE_CONFIG = {
+    apiKey:            "VOTRE_API_KEY",
+    authDomain:        "VOTRE_PROJECT.firebaseapp.com",
+    projectId:         "VOTRE_PROJECT_ID",
+    storageBucket:     "VOTRE_PROJECT.appspot.com",
+    messagingSenderId: "VOTRE_SENDER_ID",
+    appId:             "VOTRE_APP_ID"
+  };
+
+  // Mot de passe administrateur (changez-le !)
+  const ADMIN_PASSWORD = "admin2024";
+</script>
+
+<style>
+  :root {
+    --ink: #111;
+    --cream: #f8f5f0;
+    --warm: #e5ddd0;
+    --accent: #c8392b;
+    --gold: #b8860b;
+    --wa: #25D366;
+    --wa-dark: #128C7E;
+    --shadow: rgba(0,0,0,0.12);
+    --fb: #ff6b35;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--cream);
+    color: var(--ink);
+    min-height: 100vh;
+  }
+
+  /* ── FIREBASE NOT CONFIGURED BANNER ── */
+  #configBanner {
+    background: linear-gradient(135deg, #ff6b35, #f7c59f);
+    color: white;
+    padding: 14px 20px;
+    text-align: center;
+    font-size: 0.9rem;
+    font-weight: 600;
+    display: none;
+  }
+  #configBanner.show { display: block; }
+  #configBanner a { color: white; text-decoration: underline; }
+
+  /* ── HEADER ── */
+  header {
+    background: var(--ink);
+    position: sticky; top: 0; z-index: 100;
+    box-shadow: 0 2px 20px rgba(0,0,0,0.4);
+  }
+  .header-inner {
+    max-width: 1200px; margin: 0 auto;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 20px;
+  }
+  .logo { font-family: 'Playfair Display', serif; font-size: clamp(1.3rem,4vw,1.9rem); font-weight: 900; color: #fff; }
+  .logo span { color: var(--accent); }
+  .header-right { display: flex; gap: 10px; align-items: center; }
+
+  .btn-admin-toggle {
+    background: transparent;
+    border: 1.5px solid rgba(255,255,255,0.25);
+    color: rgba(255,255,255,0.7);
+    padding: 8px 14px; border-radius: 6px;
+    cursor: pointer; font-size: 0.82rem; font-weight: 500;
+    transition: all 0.2s;
+  }
+  .btn-admin-toggle:hover { border-color: white; color: white; }
+  .btn-admin-toggle.active { background: var(--accent); border-color: var(--accent); color: white; }
+
+  .btn-publish-header {
+    background: var(--accent); color: white; border: none;
+    padding: 9px 18px; border-radius: 6px;
+    cursor: pointer; font-size: 0.9rem; font-weight: 600;
+    display: none; transition: all 0.2s;
+  }
+  .btn-publish-header.visible { display: block; }
+  .btn-publish-header:hover { background: #a52d22; }
+
+  /* ── ADMIN BAR ── */
+  .admin-bar {
+    background: #1e1e1e;
+    border-bottom: 2px solid var(--accent);
+    padding: 10px 20px;
+    display: none;
+    align-items: center; justify-content: space-between;
+    gap: 12px; flex-wrap: wrap;
+  }
+  .admin-bar.visible { display: flex; }
+  .admin-bar-info { color: #aaa; font-size: 0.82rem; }
+  .admin-bar-info strong { color: var(--accent); }
+  .admin-bar-actions { display: flex; gap: 10px; align-items: center; }
+
+  .btn-wa-config {
+    background: var(--wa); color: white; border: none;
+    padding: 7px 14px; border-radius: 6px;
+    cursor: pointer; font-size: 0.82rem; font-weight: 600;
+    display: flex; align-items: center; gap: 6px; transition: background 0.2s;
+  }
+  .btn-wa-config:hover { background: var(--wa-dark); }
+  .btn-wa-config svg { width: 14px; height: 14px; fill: white; }
+
+  .btn-logout {
+    background: transparent; border: 1px solid #444; color: #888;
+    padding: 7px 12px; border-radius: 6px; cursor: pointer; font-size: 0.8rem;
+    transition: all 0.2s;
+  }
+  .btn-logout:hover { border-color: #888; color: white; }
+
+  /* ── MAIN ── */
+  main { max-width: 1200px; margin: 0 auto; padding: 28px 16px 60px; }
+
+  /* ── OVERLAYS ── */
+  .overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.72);
+    z-index: 200; display: none;
+    align-items: center; justify-content: center;
+    padding: 16px; backdrop-filter: blur(4px);
+  }
+  .overlay.active { display: flex; }
+
+  .modal {
+    background: white; border-radius: 14px;
+    padding: clamp(20px,5vw,36px);
+    width: 100%; max-width: 520px; max-height: 93vh; overflow-y: auto;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.4);
+    animation: pop 0.3s cubic-bezier(.34,1.56,.64,1);
+  }
+  @keyframes pop { from{opacity:0;transform:scale(0.88)} to{opacity:1;transform:scale(1)} }
+
+  .modal-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.5rem; font-weight: 900; margin-bottom: 16px;
+  }
+  .modal-sub { color: #666; font-size: 0.88rem; margin-bottom: 20px; line-height: 1.55; }
+
+  .form-group { margin-bottom: 16px; }
+  .form-group label {
+    display: block; font-size: 0.74rem; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 1px; color: var(--gold); margin-bottom: 7px;
+  }
+  .form-group input, .form-group select {
+    width: 100%; border: 1.5px solid var(--warm); border-radius: 7px;
+    padding: 11px 14px; font-family: 'DM Sans', sans-serif; font-size: 0.95rem;
+    color: var(--ink); background: var(--cream); transition: border-color 0.2s;
+  }
+  .form-group input:focus, .form-group select:focus {
+    outline: none; border-color: var(--accent); background: white;
+  }
+
+  /* TABS */
+  .tabs {
+    display: flex; gap: 0; margin-bottom: 16px;
+    border-radius: 8px; overflow: hidden; border: 1.5px solid var(--warm);
+  }
+  .tab-btn {
+    flex: 1; padding: 10px 6px; border: none; background: var(--cream);
+    font-family: 'DM Sans', sans-serif; font-size: 0.82rem; cursor: pointer;
+    font-weight: 500; color: #888; transition: all 0.2s;
+  }
+  .tab-btn.active { background: var(--accent); color: white; font-weight: 600; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* UPLOAD ZONE */
+  .upload-zone {
+    border: 2.5px dashed var(--warm); border-radius: 10px;
+    padding: 24px 16px; text-align: center; cursor: pointer;
+    transition: all 0.2s; background: var(--cream); position: relative;
+  }
+  .upload-zone:hover, .upload-zone.dragover { border-color: var(--accent); background: #fdf5f4; }
+  .upload-zone input[type="file"] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer;
+    width: 100%; height: 100%; border: none; padding: 0;
+  }
+  .upload-icon { font-size: 2rem; margin-bottom: 6px; }
+  .upload-text { font-size: 0.85rem; color: #888; line-height: 1.5; }
+  .upload-text strong { color: var(--accent); display: block; font-size: 0.9rem; margin-bottom: 2px; }
+
+  /* UPLOAD PROGRESS */
+  .progress-bar-wrap {
+    background: var(--warm); border-radius: 99px; height: 6px;
+    margin-top: 10px; overflow: hidden; display: none;
+  }
+  .progress-bar-wrap.show { display: block; }
+  .progress-bar {
+    height: 100%; background: var(--accent); border-radius: 99px;
+    transition: width 0.3s; width: 0%;
+  }
+  .progress-label { font-size: 0.78rem; color: #888; margin-top: 5px; text-align: center; }
+
+  .preview-container { position: relative; margin-top: 12px; display: none; }
+  .preview-container.visible { display: block; }
+  .preview-container img { width: 100%; max-height: 200px; object-fit: cover; border-radius: 8px; display: block; }
+  .preview-container video { width: 100%; max-height: 200px; border-radius: 8px; display: block; }
+  .preview-remove {
+    position: absolute; top: 8px; right: 8px;
+    background: rgba(0,0,0,0.6); color: white; border: none;
+    border-radius: 50%; width: 28px; height: 28px; cursor: pointer;
+    font-size: 0.9rem; display: flex; align-items: center; justify-content: center;
+  }
+  .preview-remove:hover { background: var(--accent); }
+
+  .url-hint { font-size: 0.78rem; color: #999; margin-top: 6px; }
+
+  .modal-btns { display: flex; gap: 10px; margin-top: 16px; }
+  .btn-confirm {
+    flex: 1; background: var(--accent); color: white; border: none;
+    padding: 13px; border-radius: 7px; font-size: 1rem; font-weight: 600;
+    cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.2s;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .btn-confirm:hover { background: #a52d22; }
+  .btn-confirm:disabled { background: #ccc; cursor: not-allowed; }
+  .btn-cancel {
+    background: transparent; border: 1.5px solid var(--warm);
+    padding: 13px 20px; border-radius: 7px; font-size: 0.95rem;
+    cursor: pointer; color: #888; font-family: 'DM Sans', sans-serif; transition: all 0.2s;
+  }
+  .btn-cancel:hover { border-color: #999; color: var(--ink); }
+
+  /* ── ARTICLES HEADER ── */
+  .articles-header { display: flex; align-items: baseline; gap: 14px; margin-bottom: 22px; flex-wrap: wrap; gap: 8px 14px; }
+  .articles-title { font-family: 'Playfair Display', serif; font-size: clamp(1.5rem,5vw,2.2rem); font-weight: 900; }
+  .articles-count { font-size: 0.85rem; color: #aaa; font-style: italic; }
+
+  /* ── GRID ── */
+  .articles-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 22px;
+  }
+  @media (max-width: 600px) { .articles-grid { grid-template-columns: 1fr; gap: 16px; } }
+
+  /* ── CARD ── */
+  .card {
+    background: white; border-radius: 12px; overflow: hidden;
+    box-shadow: 0 2px 16px var(--shadow);
+    transition: transform 0.22s, box-shadow 0.22s;
+    display: flex; flex-direction: column;
+    animation: fadeUp 0.4s ease;
+  }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+  .card:hover { transform: translateY(-4px); box-shadow: 0 14px 36px rgba(0,0,0,0.14); }
+
+  .card-media {
+    position: relative; width: 100%; padding-top: 62%;
+    overflow: hidden; background: var(--warm); cursor: pointer;
+  }
+  .card-media img, .card-media video {
+    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+  }
+  .card-media img { transition: transform 0.4s; }
+  .card:hover .card-media img { transform: scale(1.04); }
+
+  .play-overlay {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.28); transition: background 0.2s;
+  }
+  .play-overlay:hover { background: rgba(0,0,0,0.45); }
+  .play-btn {
+    width: 54px; height: 54px; border-radius: 50%;
+    background: rgba(255,255,255,0.92);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.3rem; box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    transition: transform 0.2s;
+  }
+  .play-overlay:hover .play-btn { transform: scale(1.1); }
+
+  .card-badge {
+    position: absolute; top: 12px; left: 12px;
+    background: var(--accent); color: white;
+    font-size: 0.67rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1px; padding: 4px 10px; border-radius: 20px;
+    pointer-events: none;
+  }
+  .card-badge.video { background: #1a1a2e; }
+
+  .card-body { padding: 16px; flex: 1; display: flex; flex-direction: column; }
+  .card-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(0.97rem,3vw,1.12rem); font-weight: 700;
+    line-height: 1.35; color: var(--ink); margin-bottom: 8px;
+  }
+  .card-meta {
+    display: flex; justify-content: space-between; flex-wrap: wrap;
+    gap: 4px; font-size: 0.76rem; color: #aaa; margin-bottom: 14px;
+  }
+  .card-author { color: var(--gold); font-weight: 600; }
+  .card-actions { display: flex; gap: 8px; margin-top: auto; }
+
+  .btn-wa {
+    flex: 1; display: flex; align-items: center; justify-content: center; gap: 7px;
+    background: var(--wa); color: white; border: none;
+    padding: 11px 10px; border-radius: 8px;
+    font-size: 0.85rem; font-weight: 600; cursor: pointer;
+    font-family: 'DM Sans', sans-serif; transition: all 0.2s;
+  }
+  .btn-wa:hover { background: var(--wa-dark); transform: translateY(-1px); box-shadow: 0 4px 14px rgba(37,211,102,0.3); }
+  .btn-wa svg { width: 17px; height: 17px; fill: white; flex-shrink: 0; }
+
+  .btn-icon {
+    background: var(--cream); border: 1.5px solid var(--warm); color: #666;
+    padding: 11px 13px; border-radius: 8px; cursor: pointer; font-size: 1rem;
+    transition: all 0.2s;
+  }
+  .btn-icon:hover { border-color: var(--ink); color: var(--ink); }
+
+  .btn-del {
+    background: transparent; border: 1.5px solid var(--warm); color: #ccc;
+    padding: 11px 13px; border-radius: 8px; cursor: pointer; font-size: 0.95rem;
+    display: none; transition: all 0.2s;
+  }
+  .btn-del.show { display: block; }
+  .btn-del:hover { border-color: var(--accent); color: var(--accent); background: rgba(200,57,43,0.05); }
+
+  /* ── LIGHTBOX ── */
+  .lightbox {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.93);
+    z-index: 300; display: none;
+    align-items: center; justify-content: center; padding: 16px;
+  }
+  .lightbox.active { display: flex; }
+  .lightbox-inner { position: relative; max-width: 92vw; text-align: center; }
+  .lightbox-inner img { max-width: 100%; max-height: 82vh; border-radius: 8px; object-fit: contain; display: block; }
+  .lightbox-inner video { max-width: 100%; max-height: 82vh; border-radius: 8px; display: block; }
+  .lightbox-inner iframe { width: min(85vw,920px); height: min(48vw,520px); border-radius: 8px; border: none; display: block; }
+  .lb-close {
+    position: absolute; top: -16px; right: -16px;
+    background: white; border: none; border-radius: 50%;
+    width: 36px; height: 36px; font-size: 1.1rem; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+  .lb-title { color: white; text-align: center; margin-top: 14px; font-family: 'Playfair Display', serif; font-size: 1.05rem; }
+
+  /* ── EMPTY / LOADING ── */
+  .placeholder { grid-column: 1/-1; text-align: center; padding: 70px 20px; }
+  .placeholder-icon { font-size: 4rem; margin-bottom: 16px; }
+  .placeholder h3 { font-family: 'Playfair Display', serif; font-size: 1.4rem; color: #ccc; margin-bottom: 8px; }
+  .placeholder p { color: #bbb; font-size: 0.9rem; }
+
+  .spinner {
+    width: 36px; height: 36px; border: 3px solid var(--warm);
+    border-top-color: var(--accent); border-radius: 50%;
+    animation: spin 0.8s linear infinite; margin: 0 auto 16px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── TOAST ── */
+  .toast {
+    position: fixed; bottom: 20px; right: 20px;
+    background: var(--ink); color: white; padding: 13px 18px;
+    border-radius: 8px; font-size: 0.9rem;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+    transform: translateY(80px); opacity: 0; transition: all 0.3s;
+    z-index: 500; max-width: calc(100vw - 40px);
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.ok { border-left: 4px solid var(--wa); }
+  .toast.err { border-left: 4px solid var(--accent); }
+  .toast.info { border-left: 4px solid var(--gold); }
+
+  @media (max-width: 480px) {
+    .header-inner { padding: 12px 14px; }
+    .tab-btn { font-size: 0.75rem; padding: 9px 4px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══ CONFIG BANNER ══ -->
+<div id="configBanner">
+  ⚙️ Firebase non configuré — les articles ne seront pas partagés entre visiteurs.
+  Consultez le fichier <strong>GUIDE-FIREBASE.md</strong> pour la configuration.
+</div>
+
+<!-- ══ ADMIN LOGIN ══ -->
+<div class="overlay" id="loginOverlay">
+  <div class="modal" style="max-width:380px">
+    <div style="font-size:2.5rem;margin-bottom:14px">🔐</div>
+    <div class="modal-title">Espace Admin</div>
+    <p class="modal-sub">Entrez le mot de passe pour accéder aux fonctions de publication et de gestion.</p>
+    <div class="form-group">
+      <label>Mot de passe</label>
+      <input type="password" id="pwdInput" placeholder="••••••••"
+             onkeydown="if(event.key==='Enter')loginAdmin()" />
+    </div>
+    <div class="modal-btns">
+      <button class="btn-confirm" onclick="loginAdmin()">Connexion</button>
+      <button class="btn-cancel" onclick="closeOverlay('loginOverlay')">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ WA CONFIG ══ -->
+<div class="overlay" id="waOverlay">
+  <div class="modal" style="max-width:400px">
+    <div style="width:48px;height:48px;background:var(--wa);border-radius:50%;display:flex;align-items:center;justify-content:center;margin-bottom:14px">
+      <svg viewBox="0 0 24 24" style="width:26px;height:26px;fill:white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+    </div>
+    <div class="modal-title">Numéro WhatsApp</div>
+    <p class="modal-sub">Ce numéro recevra les messages quand un visiteur clique « Partager » (format international : +237600000000).</p>
+    <div class="form-group">
+      <label>Numéro</label>
+      <input type="tel" id="waInput" placeholder="+237 600 000 000" />
+    </div>
+    <div class="modal-btns">
+      <button class="btn-confirm" onclick="saveWa()">Enregistrer</button>
+      <button class="btn-cancel" onclick="closeOverlay('waOverlay')">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PUBLISH MODAL ══ -->
+<div class="overlay" id="publishOverlay">
+  <div class="modal">
+    <div class="modal-title">📰 Publier un article</div>
+
+    <div class="form-group">
+      <label>Titre *</label>
+      <input type="text" id="fTitle" placeholder="Titre de votre article..." />
+    </div>
+    <div class="form-group">
+      <label>Auteur</label>
+      <input type="text" id="fAuthor" placeholder="Votre nom" />
+    </div>
+    <div class="form-group">
+      <label>Catégorie</label>
+      <select id="fCat">
+        <option>Actualité</option><option>Promotion</option><option>Annonce</option>
+        <option>Événement</option><option>Technologie</option><option>Santé</option>
+        <option>Sport</option><option>Culture</option><option>Économie</option><option>Autre</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>Contenu média *</label>
+      <div class="tabs">
+        <button class="tab-btn active" id="tabImg"  onclick="switchTab('img')">🖼️ Image</button>
+        <button class="tab-btn"        id="tabVid"  onclick="switchTab('vid')">🎬 Vidéo fichier</button>
+        <button class="tab-btn"        id="tabUrl"  onclick="switchTab('url')">🔗 Lien vidéo</button>
+      </div>
+
+      <!-- Image -->
+      <div class="tab-content active" id="tc-img">
+        <div class="upload-zone" id="imgZone">
+          <input type="file" accept="image/*" id="imgFile" onchange="handleFile(event,'img')" />
+          <div class="upload-icon">🖼️</div>
+          <div class="upload-text"><strong>Choisir une image</strong>Glissez ou cliquez — JPG, PNG, WebP (max 5 MB)</div>
+        </div>
+        <div class="preview-container" id="imgPrev">
+          <img id="imgPrevEl" src="" alt="aperçu" />
+          <button class="preview-remove" onclick="clearFile('img')">✕</button>
+        </div>
+        <div class="progress-bar-wrap" id="imgProgress">
+          <div class="progress-bar" id="imgBar"></div>
+        </div>
+        <p class="progress-label" id="imgLabel"></p>
+      </div>
+
+      <!-- Vidéo fichier -->
+      <div class="tab-content" id="tc-vid">
+        <div class="upload-zone" id="vidZone">
+          <input type="file" accept="video/*" id="vidFile" onchange="handleFile(event,'vid')" />
+          <div class="upload-icon">🎬</div>
+          <div class="upload-text"><strong>Choisir une vidéo</strong>Glissez ou cliquez — MP4, MOV, WebM (max 100 MB)</div>
+        </div>
+        <div class="preview-container" id="vidPrev">
+          <video id="vidPrevEl" controls></video>
+          <button class="preview-remove" onclick="clearFile('vid')">✕</button>
+        </div>
+        <div class="progress-bar-wrap" id="vidProgress">
+          <div class="progress-bar" id="vidBar"></div>
+        </div>
+        <p class="progress-label" id="vidLabel"></p>
+      </div>
+
+      <!-- URL -->
+      <div class="tab-content" id="tc-url">
+        <div class="form-group" style="margin-bottom:0">
+          <input type="url" id="videoUrl" placeholder="https://www.youtube.com/watch?v=..." />
+          <p class="url-hint">✅ YouTube, Dailymotion, Vimeo ou tout lien MP4 direct acceptés.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-btns">
+      <button class="btn-confirm" id="btnPublishConfirm" onclick="publishArticle()">
+        <span id="publishBtnText">Publier →</span>
+      </button>
+      <button class="btn-cancel" onclick="closeOverlay('publishOverlay')">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ LIGHTBOX ══ -->
+<div class="lightbox" id="lightbox">
+  <div class="lightbox-inner">
+    <button class="lb-close" onclick="closeLightbox()">✕</button>
+    <div id="lbMedia"></div>
+    <div class="lb-title" id="lbTitle"></div>
+  </div>
+</div>
+
+<!-- ══ HEADER ══ -->
+<header>
+  <div class="header-inner">
+    <div class="logo">Le<span>Journal</span></div>
+    <div class="header-right">
+      <button class="btn-publish-header" id="btnPub" onclick="openPublish()">+ Publier</button>
+      <button class="btn-admin-toggle"   id="btnAdm" onclick="toggleAdmin()">🔑 Admin</button>
+    </div>
+  </div>
+</header>
+
+<!-- ══ ADMIN BAR ══ -->
+<div class="admin-bar" id="adminBar">
+  <div class="admin-bar-info">Mode <strong>Administrateur</strong> actif — Vous pouvez publier et supprimer des articles.</div>
+  <div class="admin-bar-actions">
+    <button class="btn-wa-config" onclick="openWaModal()">
+      <svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+      Configurer WhatsApp
+    </button>
+    <button class="btn-logout" onclick="logoutAdmin()">Déconnexion</button>
+  </div>
+</div>
+
+<!-- ══ MAIN ══ -->
+<main>
+  <div class="articles-header">
+    <h2 class="articles-title">Articles publiés</h2>
+    <span class="articles-count" id="countEl"></span>
+  </div>
+  <div class="articles-grid" id="grid">
+    <div class="placeholder">
+      <div class="spinner"></div>
+      <p style="color:#aaa">Connexion à la base de données...</p>
+    </div>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<!-- ══ FIREBASE SDKs ══ -->
+<script type="module">
+import { initializeApp }              from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, query, orderBy, onSnapshot, setDoc, getDoc }
+                                       from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject }
+                                       from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
+
+/* ═══════════════════════════════════════════
+   INIT FIREBASE
+═══════════════════════════════════════════ */
+let app, db, storage, fbReady = false;
+
+function initFirebase() {
+  try {
+    if (FIREBASE_CONFIG.apiKey === "VOTRE_API_KEY") {
+      document.getElementById('configBanner').classList.add('show');
+      useFallback();
+      return;
+    }
+    app     = initializeApp(FIREBASE_CONFIG);
+    db      = getFirestore(app);
+    storage = getStorage(app);
+    fbReady = true;
+    loadWaFromFirebase();
+    listenArticles();
+  } catch(e) {
+    console.error("Firebase init error:", e);
+    document.getElementById('configBanner').classList.add('show');
+    useFallback();
+  }
+}
+
+/* ═══════════════════════════════════════════
+   FALLBACK (localStorage) quand Firebase n'est pas configuré
+═══════════════════════════════════════════ */
+function useFallback() {
+  try {
+    const raw = localStorage.getItem('lj_articles');
+    window._articles = raw ? JSON.parse(raw) : [];
+  } catch(e) { window._articles = []; }
+  try { window._wa = localStorage.getItem('lj_wa') || ''; } catch(e) { window._wa = ''; }
+  render(window._articles);
+}
+
+function saveFallback() {
+  try { localStorage.setItem('lj_articles', JSON.stringify(window._articles)); } catch(e) {}
+}
+
+/* ═══════════════════════════════════════════
+   FIRESTORE — Écoute en temps réel
+═══════════════════════════════════════════ */
+function listenArticles() {
+  const q = query(collection(db, "articles"), orderBy("createdAt", "desc"));
+  onSnapshot(q, (snap) => {
+    const arts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    window._articles = arts;
+    render(arts);
+  }, (err) => {
+    console.error("Firestore read error:", err);
+    toast("⚠️ Erreur de connexion Firestore", 'err');
+  });
+}
+
+async function loadWaFromFirebase() {
+  try {
+    const snap = await getDoc(doc(db, "config", "whatsapp"));
+    window._wa = snap.exists() ? snap.data().number : '';
+  } catch(e) { window._wa = ''; }
+}
+
+/* ═══════════════════════════════════════════
+   PUBLISH
+═══════════════════════════════════════════ */
+window.publishArticle = async function() {
+  const title  = document.getElementById('fTitle').value.trim();
+  const author = document.getElementById('fAuthor').value.trim() || 'Anonyme';
+  const cat    = document.getElementById('fCat').value;
+  const urlVal = document.getElementById('videoUrl').value.trim();
+  const tab    = window._currentTab || 'img';
+
+  if (!title) { toast('⚠️ Le titre est obligatoire', 'err'); return; }
+
+  const btn = document.getElementById('btnPublishConfirm');
+  btn.disabled = true;
+  document.getElementById('publishBtnText').textContent = 'Publication...';
+
+  try {
+    let mediaPayload = null;
+
+    if (tab === 'url') {
+      if (!urlVal) { toast('⚠️ Entrez un lien vidéo', 'err'); btn.disabled=false; document.getElementById('publishBtnText').textContent='Publier →'; return; }
+      mediaPayload = { type: 'embed', src: urlVal };
+
+    } else if (tab === 'img' || tab === 'vid') {
+      const fileInput = document.getElementById(tab === 'img' ? 'imgFile' : 'vidFile');
+      const file = fileInput.files[0];
+      if (!file) { toast('⚠️ Veuillez choisir un fichier', 'err'); btn.disabled=false; document.getElementById('publishBtnText').textContent='Publier →'; return; }
+
+      // Upload to Firebase Storage
+      const path = `media/${Date.now()}_${file.name}`;
+      const storRef = ref(storage, path);
+      const task = uploadBytesResumable(storRef, file);
+
+      const progressWrap = document.getElementById(tab+'Progress');
+      const progressBar  = document.getElementById(tab+'Bar');
+      const progressLbl  = document.getElementById(tab+'Label');
+      progressWrap.classList.add('show');
+
+      const downloadURL = await new Promise((resolve, reject) => {
+        task.on('state_changed',
+          (snap) => {
+            const pct = Math.round((snap.bytesTransferred / snap.totalBytes) * 100);
+            progressBar.style.width = pct + '%';
+            progressLbl.textContent = `Upload : ${pct}%`;
+          },
+          reject,
+          async () => { resolve(await getDownloadURL(task.snapshot.ref)); }
+        );
+      });
+
+      progressLbl.textContent = 'Upload terminé ✓';
+      mediaPayload = { type: tab === 'img' ? 'image' : 'video', src: downloadURL, storagePath: path };
+    }
+
+    const article = {
+      title, author, category: cat,
+      media: mediaPayload,
+      createdAt: new Date().toISOString(),
+      dateLabel: new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+    };
+
+    if (fbReady) {
+      await addDoc(collection(db, "articles"), article);
+    } else {
+      article.id = Date.now().toString();
+      window._articles.unshift(article);
+      saveFallback();
+      render(window._articles);
+    }
+
+    closeOverlay('publishOverlay');
+    resetForm();
+    toast('🎉 Article publié et visible par tous !', 'ok');
+  } catch(e) {
+    console.error(e);
+    toast('❌ Erreur lors de la publication : ' + e.message, 'err');
+  }
+  btn.disabled = false;
+  document.getElementById('publishBtnText').textContent = 'Publier →';
+};
+
+/* ═══════════════════════════════════════════
+   DELETE
+═══════════════════════════════════════════ */
+window.deleteArticle = async function(id) {
+  if (!window._isAdmin) return;
+  if (!confirm('Supprimer cet article définitivement ?')) return;
+
+  const art = window._articles.find(a => a.id === id);
+
+  if (fbReady) {
+    // Supprimer le fichier Storage si existant
+    if (art?.media?.storagePath) {
+      try { await deleteObject(ref(storage, art.media.storagePath)); } catch(e) {}
+    }
+    await deleteDoc(doc(db, "articles", id));
+  } else {
+    window._articles = window._articles.filter(a => a.id != id);
+    saveFallback();
+    render(window._articles);
+  }
+  toast('Article supprimé.', '');
+};
+
+/* ═══════════════════════════════════════════
+   WHATSAPP CONFIG
+═══════════════════════════════════════════ */
+window.saveWa = async function() {
+  const val = document.getElementById('waInput').value.trim().replace(/\s+/g,'');
+  if (!val) { toast('⚠️ Entrez un numéro valide', 'err'); return; }
+  window._wa = val;
+  if (fbReady) {
+    try { await setDoc(doc(db, "config", "whatsapp"), { number: val }); }
+    catch(e) {}
+  } else {
+    localStorage.setItem('lj_wa', val);
+  }
+  closeOverlay('waOverlay');
+  toast('✅ Numéro WhatsApp enregistré !', 'ok');
+};
+
+/* ═══════════════════════════════════════════
+   START
+═══════════════════════════════════════════ */
+window.addEventListener('load', () => {
+  window._articles = [];
+  window._wa = '';
+  window._isAdmin = false;
+  window._currentTab = 'img';
+  setupDragDrop();
+  initFirebase();
+});
+
+</script>
+
+<script>
+/* ═══════════════════════════════════════════
+   UI — Admin, Tabs, Preview, Render (non-module)
+═══════════════════════════════════════════ */
+
+/* Admin */
+function toggleAdmin() {
+  if (window._isAdmin) { logoutAdmin(); return; }
+  document.getElementById('pwdInput').value = '';
+  document.getElementById('loginOverlay').classList.add('active');
+  setTimeout(() => document.getElementById('pwdInput').focus(), 200);
+}
+
+function loginAdmin() {
+  if (document.getElementById('pwdInput').value === ADMIN_PASSWORD) {
+    window._isAdmin = true;
+    closeOverlay('loginOverlay');
+    document.getElementById('adminBar').classList.add('visible');
+    document.getElementById('btnAdm').classList.add('active');
+    document.getElementById('btnAdm').textContent = '🔑 Admin ✓';
+    document.getElementById('btnPub').classList.add('visible');
+    render(window._articles);
+    toast('✅ Connecté en tant qu\'administrateur', 'ok');
+  } else {
+    toast('❌ Mot de passe incorrect', 'err');
+    document.getElementById('pwdInput').value = '';
+  }
+}
+
+function logoutAdmin() {
+  window._isAdmin = false;
+  document.getElementById('adminBar').classList.remove('visible');
+  document.getElementById('btnAdm').classList.remove('active');
+  document.getElementById('btnAdm').textContent = '🔑 Admin';
+  document.getElementById('btnPub').classList.remove('visible');
+  render(window._articles);
+  toast('Déconnecté du mode admin.', '');
+}
+
+/* Publish modal */
+function openPublish() {
+  if (!window._isAdmin) return;
+  document.getElementById('publishOverlay').classList.add('active');
+}
+
+function resetForm() {
+  ['fTitle','fAuthor','videoUrl'].forEach(id => document.getElementById(id).value = '');
+  clearFile('img'); clearFile('vid');
+  switchTab('img');
+  ['imgProgress','vidProgress'].forEach(id => document.getElementById(id).classList.remove('show'));
+  ['imgLabel','vidLabel'].forEach(id => document.getElementById(id).textContent = '');
+  ['imgBar','vidBar'].forEach(id => document.getElementById(id).style.width = '0%');
+}
+
+/* Tabs */
+function switchTab(tab) {
+  window._currentTab = tab;
+  ['img','vid','url'].forEach(t => {
+    document.getElementById('tab'+t.charAt(0).toUpperCase()+t.slice(1)).classList.toggle('active', t===tab);
+    document.getElementById('tc-'+t).classList.toggle('active', t===tab);
+  });
+}
+
+/* File preview */
+function handleFile(e, type) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const maxMB = type === 'img' ? 5 : 100;
+  if (file.size > maxMB*1024*1024) { toast(`⚠️ Fichier trop lourd (max ${maxMB}MB)`, 'err'); return; }
+  const reader = new FileReader();
+  reader.onload = ev => {
+    if (type === 'img') {
+      document.getElementById('imgPrevEl').src = ev.target.result;
+      document.getElementById('imgPrev').classList.add('visible');
+      document.getElementById('imgZone').style.display = 'none';
+    } else {
+      document.getElementById('vidPrevEl').src = ev.target.result;
+      document.getElementById('vidPrev').classList.add('visible');
+      document.getElementById('vidZone').style.display = 'none';
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearFile(type) {
+  if (type === 'img') {
+    document.getElementById('imgPrevEl').src = '';
+    document.getElementById('imgPrev').classList.remove('visible');
+    document.getElementById('imgZone').style.display = 'block';
+    document.getElementById('imgFile').value = '';
+  } else {
+    document.getElementById('vidPrevEl').src = '';
+    document.getElementById('vidPrev').classList.remove('visible');
+    document.getElementById('vidZone').style.display = 'block';
+    document.getElementById('vidFile').value = '';
+  }
+}
+
+function setupDragDrop() {
+  ['imgZone','vidZone'].forEach(id => {
+    const zone = document.getElementById(id);
+    zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+    zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+    zone.addEventListener('drop', e => {
+      e.preventDefault(); zone.classList.remove('dragover');
+      const file = e.dataTransfer.files[0]; if (!file) return;
+      const type = id === 'imgZone' ? 'img' : 'vid';
+      const inp = document.getElementById(type+'File');
+      const dt = new DataTransfer(); dt.items.add(file);
+      inp.files = dt.files;
+      handleFile({ target: inp }, type);
+    });
+  });
+}
+
+/* WhatsApp */
+function shareWa(id) {
+  const a = (window._articles||[]).find(x => x.id == id);
+  if (!a) return;
+  if (!window._wa) { toast('⚠️ Numéro WhatsApp non configuré', 'err'); return; }
+  const num = window._wa.replace(/[^0-9]/g,'');
+  const msg = encodeURIComponent(`Bonjour ! 👋\n\nJe vous partage cet article :\n\n📰 *${a.title}*\n\nPublié sur Le Journal.`);
+  window.open(`https://wa.me/${num}?text=${msg}`, '_blank');
+}
+
+/* WA modal */
+function openWaModal() {
+  document.getElementById('waInput').value = window._wa || '';
+  document.getElementById('waOverlay').classList.add('active');
+}
+
+/* Lightbox */
+function openLightbox(id) {
+  const a = (window._articles||[]).find(x => x.id == id);
+  if (!a) return;
+  const m = a.media;
+  let html = '';
+  if (m.type === 'image') {
+    html = `<img src="${m.src}" alt="${esc(a.title)}" />`;
+  } else if (m.type === 'video') {
+    html = `<video src="${m.src}" controls autoplay style="max-width:85vw;max-height:80vh;border-radius:8px"></video>`;
+  } else {
+    html = `<iframe src="${embedUrl(m.src)}" allowfullscreen></iframe>`;
+  }
+  document.getElementById('lbMedia').innerHTML = html;
+  document.getElementById('lbTitle').textContent = a.title;
+  document.getElementById('lightbox').classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('active');
+  document.getElementById('lbMedia').innerHTML = '';
+  document.body.style.overflow = '';
+}
+
+function embedUrl(url) {
+  let m;
+  m = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+  if (m) return `https://www.youtube.com/embed/${m[1]}?autoplay=1`;
+  m = url.match(/dailymotion\.com\/video\/([a-z0-9]+)/i);
+  if (m) return `https://www.dailymotion.com/embed/video/${m[1]}?autoplay=1`;
+  m = url.match(/vimeo\.com\/(\d+)/);
+  if (m) return `https://player.vimeo.com/video/${m[1]}?autoplay=1`;
+  return url;
+}
+
+function ytThumb(url) {
+  const m = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+  return m ? `https://img.youtube.com/vi/${m[1]}/hqdefault.jpg` : null;
+}
+
+/* RENDER */
+function render(arts) {
+  arts = arts || [];
+  const grid = document.getElementById('grid');
+  const n = arts.length;
+  document.getElementById('countEl').textContent = n===0?'0 article':n===1?'1 article':`${n} articles`;
+
+  if (n === 0) {
+    grid.innerHTML = `<div class="placeholder">
+      <div class="placeholder-icon">📰</div>
+      <h3>Aucun article publié</h3>
+      <p>${window._isAdmin?'Cliquez sur « + Publier » pour commencer.':'Revenez bientôt !'}</p>
+    </div>`;
+    return;
+  }
+
+  grid.innerHTML = arts.map(a => {
+    const m = a.media || {};
+    const del = window._isAdmin
+      ? `<button class="btn-del show" onclick="deleteArticle('${a.id}')" title="Supprimer">🗑</button>`
+      : '';
+
+    let mediaSec = '';
+    if (m.type === 'image') {
+      mediaSec = `<div class="card-media" onclick="openLightbox('${a.id}')">
+        <img src="${m.src}" alt="${esc(a.title)}" loading="lazy" />
+        <span class="card-badge">${esc(a.category)}</span>
+      </div>`;
+    } else if (m.type === 'video') {
+      mediaSec = `<div class="card-media" onclick="openLightbox('${a.id}')">
+        <video src="${m.src}" muted preload="metadata" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video>
+        <div class="play-overlay"><div class="play-btn">▶</div></div>
+        <span class="card-badge video">🎬 Vidéo</span>
+      </div>`;
+    } else {
+      const thumb = ytThumb(m.src);
+      mediaSec = `<div class="card-media" onclick="openLightbox('${a.id}')">
+        ${thumb
+          ? `<img src="${thumb}" alt="${esc(a.title)}" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"/>`
+          : `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#111;flex-direction:column;gap:8px"><span style="font-size:2.5rem">🎬</span><span style="color:#aaa;font-size:0.78rem">Voir la vidéo</span></div>`
+        }
+        <div class="play-overlay"><div class="play-btn">▶</div></div>
+        <span class="card-badge video">▶ Vidéo</span>
+      </div>`;
+    }
+
+    return `<div class="card">
+      ${mediaSec}
+      <div class="card-body">
+        <h3 class="card-title">${esc(a.title)}</h3>
+        <div class="card-meta">
+          <span class="card-author">Par ${esc(a.author||'Anonyme')}</span>
+          <span>${a.dateLabel||''}</span>
+        </div>
+        <div class="card-actions">
+          <button class="btn-wa" onclick="shareWa('${a.id}')">
+            <svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+            Partager sur WhatsApp
+          </button>
+          <button class="btn-icon" onclick="openLightbox('${a.id}')" title="Voir en grand">🔍</button>
+          ${del}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* Utils */
+function closeOverlay(id) { document.getElementById(id).classList.remove('active'); }
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function toast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = `toast ${type}`;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+/* Close on bg click / Escape */
+['loginOverlay','waOverlay','publishOverlay'].forEach(id => {
+  document.getElementById(id)?.addEventListener('click', e => { if (e.target.id===id) closeOverlay(id); });
+});
+document.getElementById('lightbox').addEventListener('click', e => { if(e.target.id==='lightbox') closeLightbox(); });
+document.addEventListener('keydown', e => {
+  if (e.key==='Escape') { ['loginOverlay','waOverlay','publishOverlay'].forEach(closeOverlay); closeLightbox(); }
+});
+</script>
+</body>
+</html>
